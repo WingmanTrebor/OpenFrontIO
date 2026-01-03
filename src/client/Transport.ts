@@ -400,6 +400,14 @@ export class Transport {
     }
   }
 
+  /**
+   * Get the LocalServer instance (only available in single-player/replay mode).
+   * Used by McpBridge to submit intents from LLM.
+   */
+  public getLocalServer(): LocalServer | null {
+    return this.isLocal ? this.localServer : null;
+  }
+
   async joinGame() {
     this.sendMsg({
       type: "join",

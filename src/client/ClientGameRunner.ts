@@ -37,6 +37,7 @@ import {
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
+import { isMcpEnabled, McpBridge } from "./McpBridge";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
@@ -200,6 +201,15 @@ async function createClientGame(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
+  // Initialize MCP bridge if enabled and in single-player mode
+  let mcpBridge: McpBridge | null = null;
+  const localServer = transport.getLocalServer();
+  if (isMcpEnabled() && localServer) {
+    console.log("MCP mode enabled - initializing bridge");
+    mcpBridge = new McpBridge(localServer, lobbyConfig.clientID);
+    mcpBridge.connect();
+  }
+
   return new ClientGameRunner(
     lobbyConfig,
     eventBus,
@@ -208,6 +218,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    mcpBridge,
   );
 }
 
@@ -225,6 +236,8 @@ export class ClientGameRunner {
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
 
+  private mcpBridge: McpBridge | null = null;
+
   constructor(
     private lobby: LobbyConfig,
     private eventBus: EventBus,
@@ -233,8 +246,10 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    mcpBridge: McpBridge | null = null,
   ) {
     this.lastMessageTime = Date.now();
+    this.mcpBridge = mcpBridge;
   }
 
   private async saveGame(update: WinUpdate) {
@@ -294,7 +309,9 @@ export class ClientGameRunner {
 
     this.renderer.initialize();
     this.input.initialize();
-    this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
+
+    // Define the core game update handler
+    const gameUpdateHandler = (gu: GameUpdateViewData | ErrorUpdate) => {
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
       }
@@ -327,7 +344,14 @@ export class ClientGameRunner {
       if (gu.updates[GameUpdateType.Win].length > 0) {
         this.saveGame(gu.updates[GameUpdateType.Win][0]);
       }
-    });
+    };
+
+    // If MCP bridge is active, wrap the callback to observe updates
+    const finalHandler = this.mcpBridge
+      ? this.mcpBridge.wrapGameUpdateCallback(gameUpdateHandler)
+      : gameUpdateHandler;
+
+    this.worker.start(finalHandler);
 
     const worker = this.worker;
     const keepWorkerAlive = () => {
@@ -468,6 +492,11 @@ export class ClientGameRunner {
     if (this.goToPlayerTimeout) {
       clearTimeout(this.goToPlayerTimeout);
       this.goToPlayerTimeout = null;
+    }
+    // Disconnect MCP bridge if active
+    if (this.mcpBridge) {
+      this.mcpBridge.disconnect();
+      this.mcpBridge = null;
     }
   }
 
