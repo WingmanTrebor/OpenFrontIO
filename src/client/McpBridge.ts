@@ -1,12 +1,14 @@
 import { Intent } from "../core/Schemas";
 import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
+import { TerrainMapData } from "../core/game/TerrainMapLoader";
+import { McpMapDataMessage, SessionInfo } from "../mcp/schema";
 import { LocalServer } from "./LocalServer";
 
 /**
  * Message types sent from Game Bridge to MCP Server
  */
 interface BridgeToMcpMessage {
-  type: "game_update" | "session_info" | "query_response";
+  type: "game_update" | "session_info" | "query_response" | "map_data";
   payload: unknown;
 }
 
@@ -46,6 +48,7 @@ export class McpBridge {
   constructor(
     private localServer: LocalServer,
     private clientID: string,
+    private gameMap: TerrainMapData,
   ) {}
 
   /**
@@ -64,6 +67,8 @@ export class McpBridge {
 
         // Send initial session info
         this.sendSessionInfo();
+        // Send static map data
+        this.sendMapData();
       };
 
       this.socket.onmessage = (event: MessageEvent) => {
@@ -164,12 +169,32 @@ export class McpBridge {
       return;
     }
 
+    const startInfo = this.localServer.getGameStartInfo();
+    if (!startInfo) {
+      console.warn("McpBridge: GameStartInfo not yet available");
+      return;
+    }
+
+    const sessionInfo: SessionInfo = {
+      gameID: startInfo.gameID,
+      clientID: this.clientID,
+      playerID: 0, // In singleplayer, main player is usually 0, but will be refined by PlayerUpdate
+      tick: 0,
+      isPaused: false,
+      inSpawnPhase: true,
+      config: {
+        gameMap: startInfo.config.gameMap,
+        gameMapSize: startInfo.config.gameMapSize,
+        difficulty: startInfo.config.difficulty,
+        gameType: startInfo.config.gameType,
+        gameMode: startInfo.config.gameMode,
+        turnIntervalMs: Number((startInfo.config as any).turnIntervalMs) || 200,
+      },
+    };
+
     const message: BridgeToMcpMessage = {
       type: "session_info",
-      payload: {
-        clientID: this.clientID,
-        timestamp: Date.now(),
-      },
+      payload: sessionInfo,
     };
 
     this.socket.send(
@@ -177,6 +202,48 @@ export class McpBridge {
         typeof value === "bigint" ? value.toString() : value,
       ),
     );
+  }
+
+  /**
+   * Serialize and send the static map data.
+   */
+  private sendMapData(): void {
+    if (!this.socket || !this.isConnected) {
+      return;
+    }
+
+    const gm = this.gameMap.gameMap;
+    const width = gm.width();
+    const height = gm.height();
+    const terrain = new Array(width * height);
+
+    // Reconstruct terrain format
+    // Bits 0-4: magnitude (0-31)
+    // Bit 5: ocean
+    // Bit 6: shoreline
+    // Bit 7: land
+    gm.forEachTile((ref) => {
+      let val = gm.magnitude(ref) & 0x1f;
+      if (gm.isOcean(ref)) val |= 1 << 5;
+      if (gm.isShoreline(ref)) val |= 1 << 6;
+      if (gm.isLand(ref)) val |= 1 << 7;
+      terrain[ref] = val;
+    });
+
+    const mapData: McpMapDataMessage = {
+      type: "map_data",
+      width,
+      height,
+      terrain,
+      numLandTiles: gm.numLandTiles(),
+    };
+
+    const message: BridgeToMcpMessage = {
+      type: "map_data",
+      payload: mapData,
+    };
+
+    this.socket.send(JSON.stringify(message));
   }
 
   /**

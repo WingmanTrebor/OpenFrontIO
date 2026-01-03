@@ -58,6 +58,10 @@ export class LocalServer {
     this.clientMessage = clientMessage;
   }
 
+  public getGameStartInfo() {
+    return this.lobbyConfig.gameStartInfo;
+  }
+
   start() {
     console.log("local server starting");
     this.turnCheckInterval = setInterval(() => {

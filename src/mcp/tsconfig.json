@@ -3,11 +3,9 @@
   "compilerOptions": {
     // Override root config for Node.js execution
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "outDir": "./dist",
-    "rootDir": ".",
-
     // Node-specific settings
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -15,26 +13,18 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-
     // Strict type checking
     "strict": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
-
     // Skip lib check for faster compilation
     "skipLibCheck": true,
-
     // Allow importing from parent directories
     "baseUrl": ".",
     "paths": {
       "@core/*": ["../core/*"]
     }
   },
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

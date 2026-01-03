@@ -209,6 +209,7 @@ async function createClientGame(
     transport,
     worker,
     gameView,
+    gameMap!,
   );
 }
 
@@ -236,6 +237,7 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
+    private gameMap: TerrainMapData,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -279,7 +281,12 @@ export class ClientGameRunner {
     const localServer = this.transport.getLocalServer();
     if (localServer) {
       console.log("[MCP] Initializing Bridge (Always On)...");
-      this.mcpBridge = new McpBridge(localServer, this.lobby.clientID);
+      console.log("[MCP] Initializing Bridge (Always On)...");
+      this.mcpBridge = new McpBridge(
+        localServer,
+        this.lobby.clientID,
+        this.gameMap,
+      );
       this.mcpBridge.connect();
     }
 
