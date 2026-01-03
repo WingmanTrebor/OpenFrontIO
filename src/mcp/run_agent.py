@@ -42,8 +42,8 @@ from openai import OpenAI
 
 
 # Configuration
-LLM_BASE_URL = "http://localhost:5001/v1"  # KoboldCPP default, change to http://localhost:11434/v1 for Ollama
-MODEL_NAME = "llama3"  # Model name for the LLM
+LLM_BASE_URL = "http://localhost:11434/v1"  # http://localhost:5001/v1 for KoboldCPP, http://localhost:11434/v1 for Ollama
+MODEL_NAME = "qwen3:4b"  # Model name for the LLM
 TURN_INTERVAL_SECONDS = 5  # Time between AI turns
 
 
@@ -64,6 +64,18 @@ class MCPClient:
         for line in self.process.stderr:
             decoded = line.decode('utf-8').strip()
             self.stderr_queue.put(decoded)
+            
+            # Filter out noisy game update logs to keep console readable
+            if any(noise in decoded for noise in [
+                "Received game update",
+                "Broadcasting game update",
+                "Game state updated",
+                "Tick:",
+                "packedTileUpdates"
+            ]):
+                continue  # Skip noisy logs
+            
+            # Only print important messages
             print(f"[MCP Server] {decoded}", file=sys.stderr)
     
     def wait_for_connection(self, timeout: int = 30):
