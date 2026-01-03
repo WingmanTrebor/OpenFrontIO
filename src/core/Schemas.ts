@@ -372,7 +372,7 @@ export const UpdateGameConfigIntentSchema = BaseIntentSchema.extend({
   config: GameConfigSchema.partial(),
 });
 
-const IntentSchema = z.discriminatedUnion("type", [
+export const IntentSchema = z.discriminatedUnion("type", [
   AttackIntentSchema,
   CancelAttackIntentSchema,
   SpawnIntentSchema,
@@ -398,6 +398,8 @@ const IntentSchema = z.discriminatedUnion("type", [
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
 ]);
+
+export { IntentSchema as Intent };
 
 //
 // Server utility types
