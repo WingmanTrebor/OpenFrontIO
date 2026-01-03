@@ -37,7 +37,7 @@ import {
   TickMetricsEvent,
 } from "./InputHandler";
 import { endGame, startGame, startTime } from "./LocalPersistantStats";
-import { isMcpEnabled, McpBridge } from "./McpBridge";
+import { McpBridge } from "./McpBridge";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import {
   SendAttackIntentEvent,
@@ -201,15 +201,6 @@ async function createClientGame(
     `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
   );
 
-  // Initialize MCP bridge if enabled and in single-player mode
-  let mcpBridge: McpBridge | null = null;
-  const localServer = transport.getLocalServer();
-  if (isMcpEnabled() && localServer) {
-    console.log("MCP mode enabled - initializing bridge");
-    mcpBridge = new McpBridge(localServer, lobbyConfig.clientID);
-    mcpBridge.connect();
-  }
-
   return new ClientGameRunner(
     lobbyConfig,
     eventBus,
@@ -218,7 +209,6 @@ async function createClientGame(
     transport,
     worker,
     gameView,
-    mcpBridge,
   );
 }
 
@@ -246,10 +236,8 @@ export class ClientGameRunner {
     private transport: Transport,
     private worker: WorkerClient,
     private gameView: GameView,
-    mcpBridge: McpBridge | null = null,
   ) {
     this.lastMessageTime = Date.now();
-    this.mcpBridge = mcpBridge;
   }
 
   private async saveGame(update: WinUpdate) {
@@ -283,8 +271,17 @@ export class ClientGameRunner {
   }
 
   public start() {
+    console.log("!!! RUNNER START !!!");
     SoundManager.playBackgroundMusic();
     console.log("starting client game");
+
+    // MCP Bridge - Always Active
+    const localServer = this.transport.getLocalServer();
+    if (localServer) {
+      console.log("[MCP] Initializing Bridge (Always On)...");
+      this.mcpBridge = new McpBridge(localServer, this.lobby.clientID);
+      this.mcpBridge.connect();
+    }
 
     this.isActive = true;
     this.lastMessageTime = Date.now();

@@ -13,19 +13,18 @@ interface BridgeToMcpMessage {
 /**
  * Message types received from MCP Server
  */
-interface McpToBridgeMessage {
-  type: "intent" | "query";
-  id?: string;
-  payload: unknown;
-}
-
-/**
- * Intent message from MCP Server
- */
 interface McpIntentMessage {
   type: "intent";
   intent: Intent;
 }
+
+interface McpQueryMessage {
+  type: "query";
+  id: string;
+  payload: unknown;
+}
+
+type McpToBridgeMessage = McpIntentMessage | McpQueryMessage;
 
 /**
  * McpBridge connects the browser game client to the MCP server.
@@ -128,7 +127,11 @@ export class McpBridge {
         payload: serializedUpdate,
       };
 
-      this.socket.send(JSON.stringify(message));
+      this.socket.send(
+        JSON.stringify(message, (_key, value) =>
+          typeof value === "bigint" ? value.toString() : value,
+        ),
+      );
     } catch (error) {
       console.error("McpBridge: Failed to forward game update:", error);
     }
@@ -169,7 +172,11 @@ export class McpBridge {
       },
     };
 
-    this.socket.send(JSON.stringify(message));
+    this.socket.send(
+      JSON.stringify(message, (_key, value) =>
+        typeof value === "bigint" ? value.toString() : value,
+      ),
+    );
   }
 
   /**
@@ -179,9 +186,10 @@ export class McpBridge {
     try {
       const message = JSON.parse(data) as McpToBridgeMessage;
 
-      switch (message.type) {
+      const { type } = message;
+      switch (type) {
         case "intent":
-          this.handleIntentMessage(message as McpIntentMessage);
+          this.handleIntentMessage(message);
           break;
 
         case "query":
@@ -190,7 +198,7 @@ export class McpBridge {
           break;
 
         default:
-          console.warn("McpBridge: Unknown message type:", message.type);
+          console.warn("McpBridge: Unknown message type:", type);
       }
     } catch (error) {
       console.error("McpBridge: Failed to parse MCP message:", error);
@@ -259,26 +267,4 @@ export class McpBridge {
   public get connected(): boolean {
     return this.isConnected;
   }
-}
-
-/**
- * Check if MCP mode is enabled via URL parameter or global flag.
- */
-export function isMcpEnabled(): boolean {
-  // Check URL parameter
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get("mcp") === "true") {
-    return true;
-  }
-
-  // Check global flag
-  if (
-    typeof window !== "undefined" &&
-    (window as unknown as { OPENFRONT_MCP_ENABLED?: boolean })
-      .OPENFRONT_MCP_ENABLED === true
-  ) {
-    return true;
-  }
-
-  return false;
 }
