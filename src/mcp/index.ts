@@ -17,8 +17,9 @@ async function main() {
   });
 
   wsServer.onMessage((message) => {
-    console.log("MCP: Received message from game:", message.type);
-    // TODO: Handle game messages (will be implemented in Phase 2)
+    // Output message as JSON-RPC notification for LLM (stdio)
+    // For verification, we just dump the JSON
+    console.log(JSON.stringify(message));
   });
 
   console.log(`MCP Server listening on ws://localhost:${wsServer.getPort()}`);
