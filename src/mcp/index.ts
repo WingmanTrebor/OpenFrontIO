@@ -1,39 +1,48 @@
 #!/usr/bin/env node
 
+import { GameStateCache } from "./GameStateCache.js";
+import { McpServer } from "./McpServer.js";
 import { GameWebSocketServer } from "./WebSocketServer.js";
 
 async function main() {
-  console.log("Starting OpenFront MCP Server...");
+  console.error("Starting OpenFront MCP Server...");
+
+  // Initialize shared state cache
+  const gameCache = new GameStateCache();
+
+  // Create MCP Server for LLM connection (Stdio)
+  const mcpServer = new McpServer(gameCache);
+  await mcpServer.connect();
 
   // Create WebSocket server for game connection
-  const wsServer = new GameWebSocketServer(8765);
+  const wsServer = new GameWebSocketServer(gameCache, 8765);
 
   wsServer.onConnection(() => {
-    console.log("MCP: Game connected successfully");
+    console.error("MCP: Game connected successfully via WebSocket");
   });
 
   wsServer.onDisconnection(() => {
-    console.log("MCP: Game disconnected");
+    console.error("MCP: Game disconnected");
   });
 
   wsServer.onMessage((message) => {
-    // Output message as JSON-RPC notification for LLM (stdio)
-    // For verification, we just dump the JSON
-    console.log(JSON.stringify(message));
+    // For verification, we can still log some metadata,
+    // but avoid spamming stdout as it's used for MCP communication
+    console.error(`MCP: Received message of type: ${message.type}`);
   });
 
-  console.log(`MCP Server listening on ws://localhost:${wsServer.getPort()}`);
-  console.log("Waiting for game client to connect...");
+  console.error(`MCP Server listening on ws://localhost:${wsServer.getPort()}`);
+  console.error("Waiting for game client to connect...");
 
   // Handle graceful shutdown
   process.on("SIGINT", async () => {
-    console.log("\nShutting down MCP Server...");
+    console.error("\nShutting down MCP Server...");
     await wsServer.close();
     process.exit(0);
   });
 
   process.on("SIGTERM", async () => {
-    console.log("\nShutting down MCP Server...");
+    console.error("\nShutting down MCP Server...");
     await wsServer.close();
     process.exit(0);
   });

@@ -28,12 +28,12 @@ export class GameStateCache {
 
     switch (type) {
       case "session_info":
-        console.log("CACHE: Received session info");
+        console.error("CACHE: Received session info");
         this.sessionInfo = payload as SessionInfo;
         break;
 
       case "map_data":
-        console.log("CACHE: Received map data");
+        console.error("CACHE: Received map data");
         this.handleMapData(payload as McpMapDataMessage);
         break;
 
@@ -55,7 +55,7 @@ export class GameStateCache {
       terrainBuffer,
       data.numLandTiles,
     );
-    console.log(
+    console.error(
       `CACHE: Map initialized (${data.width}x${data.height}, ${data.numLandTiles} land tiles)`,
     );
   }
@@ -118,21 +118,16 @@ export class GameStateCache {
       // Update Players
       const playerUpdates = update.updates[GameUpdateType.Player];
       if (playerUpdates) {
-        this.currentGameState.players = playerUpdates.map((p) => {
+        this.currentGameState.players = playerUpdates.map((p: any) => {
           const info: PlayerInfo = {
-            id: p.id as unknown as number, // Cast PlayerID (string) to number if schema requires, or adjust schema
-            // Wait, core Schema says PlayerID is string, but our MCP schema said number.
-            // Let's check Schema.ts again. PlayerID is string (alias).
-            // But usually in game logic we use smallID (number) for efficiency.
-            // Let's use smallID for ID in MCP schema to save tokens?
-            // MCP Schema says id: number.
+            id: p.id as unknown as number,
             smallID: p.smallID,
             name: p.name,
             displayName: p.displayName,
             isAlive: p.isAlive,
             isDisconnected: p.isDisconnected,
             tilesOwned: p.tilesOwned,
-            gold: Number(p.gold), // serialized as string/bigint
+            gold: Number(p.gold),
             troops: p.troops,
             isTraitor: p.isTraitor,
             team: p.team,
@@ -143,7 +138,7 @@ export class GameStateCache {
         // Update MyPlayer
         if (this.sessionInfo?.clientID) {
           const myP = playerUpdates.find(
-            (p) => p.clientID === this.sessionInfo!.clientID,
+            (p: any) => p.clientID === this.sessionInfo!.clientID,
           );
           if (myP) {
             this.currentGameState.myPlayer = {
@@ -155,25 +150,25 @@ export class GameStateCache {
               tilesOwned: myP.tilesOwned,
               isAlive: myP.isAlive,
               hasSpawned: myP.hasSpawned,
-              allies: myP.allies, // these are smallIDs
-              embargoes: Array.from(myP.embargoes).map((id) => Number(id)), // Set -> Array
+              allies: myP.allies,
+              embargoes: Array.from(myP.embargoes).map((id: any) => Number(id)),
               targets: myP.targets,
-              outgoingAttacks: myP.outgoingAttacks.map((a) => ({
+              outgoingAttacks: myP.outgoingAttacks.map((a: any) => ({
                 id: a.id,
-                targetID: a.targetID, // This is smallID?
+                targetID: a.targetID,
                 troops: a.troops,
                 retreating: a.retreating,
               })),
-              incomingAttacks: myP.incomingAttacks.map((a) => ({
+              incomingAttacks: myP.incomingAttacks.map((a: any) => ({
                 id: a.id,
-                targetID: a.targetID, // attackerID?
+                targetID: a.targetID,
                 troops: a.troops,
                 retreating: a.retreating,
               })),
-              outgoingAllianceRequests: myP.outgoingAllianceRequests.map((id) =>
-                Number(id),
-              ),
-              alliances: myP.alliances.map((a) => ({
+              outgoingAllianceRequests: (
+                myP.outgoingAllianceRequests as any[]
+              ).map((id: any) => Number(id)),
+              alliances: myP.alliances.map((a: any) => ({
                 otherPlayerID: Number(a.other),
                 expiresAtTick: a.expiresAt,
                 hasExtensionRequest: a.hasExtensionRequest,
@@ -186,17 +181,9 @@ export class GameStateCache {
       // Update Units
       const unitUpdates = update.updates[GameUpdateType.Unit];
       if (unitUpdates) {
-        // We might want to persist units and only update/delete.
-        // For simplicity v1, we just replace the list if we get a full dump,
-        // but GameUpdates are usually deltas.
-        // However, `GameStateCache` should probably be robust.
-        // If `GameUpdateViewData` only contains *changed* units, we need a map.
-        // For now, let's assume we map what we see. Use a Map in state if needed.
-        // The current GameState interface has `units: UnitInfo[]`.
-        // Let's rely on the LLM traversing the visible units.
         this.currentGameState.units = unitUpdates
-          .filter((u) => u.isActive) // Only active units
-          .map((u) => ({
+          .filter((u: any) => u.isActive) // Only active units
+          .map((u: any) => ({
             id: u.id,
             unitType: u.unitType,
             ownerID: u.ownerID,

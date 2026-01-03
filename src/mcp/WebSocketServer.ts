@@ -1,7 +1,9 @@
 import { WebSocket, WebSocketServer as WSServer } from "ws";
+import { GameStateCache } from "./GameStateCache.js";
 
 export interface GameMessage {
   type: string;
+  payload: any;
   [key: string]: any;
 }
 
@@ -12,7 +14,10 @@ export class GameWebSocketServer {
   private onConnectionCallback?: () => void;
   private onDisconnectionCallback?: () => void;
 
-  constructor(port: number = 8765) {
+  constructor(
+    private gameCache: GameStateCache,
+    port: number = 8765,
+  ) {
     this.wss = new WSServer({ port, host: "localhost" });
     this.setupServer();
   }
@@ -21,20 +26,22 @@ export class GameWebSocketServer {
     this.wss.on("connection", (ws: WebSocket) => {
       // Only allow one game connection at a time
       if (this.gameSocket) {
-        console.warn(
-          "MCP: Rejecting new game connection (already connected)",
-        );
+        console.error("MCP: Rejecting new game connection (already connected)");
         ws.close(1008, "Server already has an active game connection");
         return;
       }
 
-      console.log("MCP: Game client connected");
+      console.error("MCP: Game client connected");
       this.gameSocket = ws;
 
       // Set up message handler
       ws.on("message", (data: Buffer) => {
         try {
           const message = JSON.parse(data.toString()) as GameMessage;
+
+          // Update Game State Cache
+          this.gameCache.update(message);
+
           if (this.onMessageCallback) {
             this.onMessageCallback(message);
           }
@@ -45,7 +52,7 @@ export class GameWebSocketServer {
 
       // Handle disconnection
       ws.on("close", () => {
-        console.log("MCP: Game client disconnected");
+        console.error("MCP: Game client disconnected");
         if (this.gameSocket === ws) {
           this.gameSocket = null;
           if (this.onDisconnectionCallback) {
@@ -75,7 +82,7 @@ export class GameWebSocketServer {
    */
   public broadcast(data: any): void {
     if (!this.gameSocket || this.gameSocket.readyState !== WebSocket.OPEN) {
-      console.warn("MCP: Cannot broadcast - no active game connection");
+      console.error("MCP: Cannot broadcast - no active game connection");
       return;
     }
 
@@ -92,8 +99,7 @@ export class GameWebSocketServer {
    */
   public isConnected(): boolean {
     return (
-      this.gameSocket !== null &&
-      this.gameSocket.readyState === WebSocket.OPEN
+      this.gameSocket !== null && this.gameSocket.readyState === WebSocket.OPEN
     );
   }
 
