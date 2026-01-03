@@ -277,4 +277,11 @@ export class GameStateCache {
       hasDefenseBonus: this.gameMap.hasDefenseBonus(ref),
     };
   }
+
+  public getNeighbors(ref: number): number[] {
+    if (!this.gameMap) {
+      return [];
+    }
+    return this.gameMap.neighbors(ref);
+  }
 }

@@ -34,6 +34,19 @@ import { PastelThemeDark } from "./PastelThemeDark";
 const DEFENSE_DEBUFF_MIDPOINT = 150_000;
 const DEFENSE_DEBUFF_DECAY_RATE = Math.LN2 / 50000;
 
+export const UNIT_COSTS = {
+  Warship: (n: number) => Math.min(1_000_000, (n + 1) * 250_000),
+  Port: (n: number) => Math.min(1_000_000, Math.pow(2, n) * 125_000),
+  AtomBomb: () => 750_000,
+  HydrogenBomb: () => 5_000_000,
+  MIRV: (launched: number) => 25_000_000 + launched * 15_000_000,
+  MissileSilo: () => 1_000_000,
+  DefensePost: (n: number) => Math.min(250_000, (n + 1) * 50_000),
+  SAMLauncher: (n: number) => Math.min(3_000_000, (n + 1) * 1_500_000),
+  City: (n: number) => Math.min(1_000_000, Math.pow(2, n) * 125_000),
+  Factory: (n: number) => Math.min(1_000_000, Math.pow(2, n) * 125_000),
+};
+
 const JwksSchema = z.object({
   keys: z
     .object({
@@ -409,10 +422,7 @@ export class DefaultConfig implements Config {
         };
       case UnitType.Warship:
         return {
-          cost: this.costWrapper(
-            (numUnits: number) => Math.min(1_000_000, (numUnits + 1) * 250_000),
-            UnitType.Warship,
-          ),
+          cost: this.costWrapper(UNIT_COSTS.Warship, UnitType.Warship),
           territoryBound: false,
           maxHealth: 1000,
         };
@@ -430,8 +440,7 @@ export class DefaultConfig implements Config {
       case UnitType.Port:
         return {
           cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UNIT_COSTS.Port,
             UnitType.Port,
             UnitType.Factory,
           ),
@@ -442,12 +451,15 @@ export class DefaultConfig implements Config {
         };
       case UnitType.AtomBomb:
         return {
-          cost: this.costWrapper(() => 750_000, UnitType.AtomBomb),
+          cost: this.costWrapper(UNIT_COSTS.AtomBomb, UnitType.AtomBomb),
           territoryBound: false,
         };
       case UnitType.HydrogenBomb:
         return {
-          cost: this.costWrapper(() => 5_000_000, UnitType.HydrogenBomb),
+          cost: this.costWrapper(
+            UNIT_COSTS.HydrogenBomb,
+            UnitType.HydrogenBomb,
+          ),
           territoryBound: false,
         };
       case UnitType.MIRV:
@@ -456,7 +468,9 @@ export class DefaultConfig implements Config {
             if (player.type() === PlayerType.Human && this.infiniteGold()) {
               return 0n;
             }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+            return BigInt(
+              UNIT_COSTS.MIRV(Number(game.stats().numMirvsLaunched())),
+            );
           },
           territoryBound: false,
         };
@@ -472,38 +486,27 @@ export class DefaultConfig implements Config {
         };
       case UnitType.MissileSilo:
         return {
-          cost: this.costWrapper(() => 1_000_000, UnitType.MissileSilo),
+          cost: this.costWrapper(UNIT_COSTS.MissileSilo, UnitType.MissileSilo),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 10 * 10,
           upgradable: true,
         };
       case UnitType.DefensePost:
         return {
-          cost: this.costWrapper(
-            (numUnits: number) => Math.min(250_000, (numUnits + 1) * 50_000),
-            UnitType.DefensePost,
-          ),
+          cost: this.costWrapper(UNIT_COSTS.DefensePost, UnitType.DefensePost),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 5 * 10,
         };
       case UnitType.SAMLauncher:
         return {
-          cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(3_000_000, (numUnits + 1) * 1_500_000),
-            UnitType.SAMLauncher,
-          ),
+          cost: this.costWrapper(UNIT_COSTS.SAMLauncher, UnitType.SAMLauncher),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 30 * 10,
           upgradable: true,
         };
       case UnitType.City:
         return {
-          cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
-            UnitType.City,
-          ),
+          cost: this.costWrapper(UNIT_COSTS.City, UnitType.City),
           territoryBound: true,
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -512,8 +515,7 @@ export class DefaultConfig implements Config {
       case UnitType.Factory:
         return {
           cost: this.costWrapper(
-            (numUnits: number) =>
-              Math.min(1_000_000, Math.pow(2, numUnits) * 125_000),
+            UNIT_COSTS.Factory,
             UnitType.Factory,
             UnitType.Port,
           ),

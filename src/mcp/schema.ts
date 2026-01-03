@@ -172,3 +172,38 @@ export interface TileData {
   isBorder: boolean;
   hasDefenseBonus: boolean;
 }
+
+/**
+ * Represents the available actions for a player at a specific location or globally.
+ * Matches MCP-SPEC.md Section 5.1
+ */
+export interface PlayerAction {
+  canAttack: boolean;
+  buildableUnits: BuildableUnit[];
+  canSendEmojiAllPlayers: boolean;
+  canEmbargoAll: boolean;
+
+  // If tile has owner (other than self)
+  interaction?: PlayerInteraction;
+}
+
+export interface BuildableUnit {
+  type: string; // UnitType
+  cost: number;
+  canBuild: boolean;
+  canUpgrade: number | false; // Unit ID if upgradeable
+}
+
+export interface PlayerInteraction {
+  ownerID: number;
+  ownerName: string;
+  sharedBorder: boolean;
+  canSendEmoji: boolean;
+  canTarget: boolean;
+  canSendAllianceRequest: boolean;
+  canBreakAlliance: boolean;
+  canDonateGold: boolean;
+  canDonateTroops: boolean;
+  canEmbargo: boolean;
+  allianceExpiresAt?: number;
+}
