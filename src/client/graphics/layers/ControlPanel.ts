@@ -5,7 +5,7 @@ import { EventBus } from "../../../core/EventBus";
 import { Gold } from "../../../core/game/Game";
 import { GameView } from "../../../core/game/GameView";
 import { ClientID } from "../../../core/Schemas";
-import { AttackRatioEvent } from "../../InputHandler";
+import { AttackRatioEvent, SetAttackRatioEvent } from "../../InputHandler";
 import { renderNumber, renderTroops } from "../../Utils";
 import { UIState } from "../UIState";
 import { Layer } from "./Layer";
@@ -67,6 +67,12 @@ export class ControlPanel extends LitElement implements Layer {
 
       this.attackRatio = newAttackRatio;
       this.onAttackRatioChange(this.attackRatio);
+    });
+
+    this.eventBus.on(SetAttackRatioEvent, (event) => {
+      this.attackRatio = event.attackRatio;
+      this.onAttackRatioChange(this.attackRatio);
+      localStorage.setItem("settings.attackRatio", this.attackRatio.toString());
     });
   }
 

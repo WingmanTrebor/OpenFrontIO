@@ -1,7 +1,9 @@
+import { EventBus } from "../core/EventBus";
 import { Intent } from "../core/Schemas";
 import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
 import { TerrainMapData } from "../core/game/TerrainMapLoader";
 import { McpMapDataMessage, SessionInfo } from "../mcp/schema";
+import { SetAttackRatioEvent } from "./InputHandler";
 import { LocalServer } from "./LocalServer";
 
 /**
@@ -26,7 +28,15 @@ interface McpQueryMessage {
   payload: unknown;
 }
 
-type McpToBridgeMessage = McpIntentMessage | McpQueryMessage;
+interface McpSetAttackRatioMessage {
+  type: "set_attack_ratio";
+  ratio: number;
+}
+
+type McpToBridgeMessage =
+  | McpIntentMessage
+  | McpQueryMessage
+  | McpSetAttackRatioMessage;
 
 /**
  * McpBridge connects the browser game client to the MCP server.
@@ -49,6 +59,7 @@ export class McpBridge {
     private localServer: LocalServer,
     private clientID: string,
     private gameMap: TerrainMapData,
+    private eventBus: EventBus,
   ) {}
 
   /**
@@ -264,12 +275,25 @@ export class McpBridge {
           console.log("McpBridge: Received query (not yet implemented)");
           break;
 
+        case "set_attack_ratio":
+          this.handleSetAttackRatio(message);
+          break;
+
         default:
           console.warn("McpBridge: Unknown message type:", type);
       }
     } catch (error) {
       console.error("McpBridge: Failed to parse MCP message:", error);
     }
+  }
+
+  /**
+   * Handle a set_attack_ratio message from the MCP server.
+   */
+  private handleSetAttackRatio(message: McpSetAttackRatioMessage): void {
+    const ratio = Math.max(0, Math.min(1, message.ratio));
+    console.log("McpBridge: Setting attack ratio to:", ratio);
+    this.eventBus.emit(new SetAttackRatioEvent(ratio));
   }
 
   /**

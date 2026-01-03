@@ -286,6 +286,7 @@ export class ClientGameRunner {
         localServer,
         this.lobby.clientID,
         this.gameMap,
+        this.eventBus,
       );
       this.mcpBridge.connect();
     }

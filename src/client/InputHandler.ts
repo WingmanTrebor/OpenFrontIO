@@ -114,6 +114,10 @@ export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
 
+export class SetAttackRatioEvent implements GameEvent {
+  constructor(public readonly attackRatio: number) {}
+}
+
 export class ReplaySpeedChangeEvent implements GameEvent {
   constructor(public readonly replaySpeedMultiplier: ReplaySpeedMultiplier) {}
 }

@@ -10,12 +10,12 @@ async function main() {
   // Initialize shared state cache
   const gameCache = new GameStateCache();
 
-  // Create MCP Server for LLM connection (Stdio)
-  const mcpServer = new McpServer(gameCache);
-  await mcpServer.connect();
-
   // Create WebSocket server for game connection
   const wsServer = new GameWebSocketServer(gameCache, 8765);
+
+  // Create MCP Server for LLM connection (Stdio)
+  const mcpServer = new McpServer(gameCache, wsServer);
+  await mcpServer.connect();
 
   wsServer.onConnection(() => {
     console.error("MCP: Game connected successfully via WebSocket");
